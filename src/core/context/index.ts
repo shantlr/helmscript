@@ -4,6 +4,7 @@ import { type Step } from './type';
 import { createStep } from './createStep';
 import { createUtils } from './createUtils';
 import { type HelmChartBuiltin } from '../../types';
+import { type ChartDict } from '../builder/dict';
 
 export const createChartContext = () => {
   const stack: { add: (str: string) => void }[] = [];
@@ -30,7 +31,7 @@ export const createChartContext = () => {
   const context = {
     stack,
     vars: createVarProxy<{
-      Values: any;
+      Values: ChartDict;
       Chart: HelmChartBuiltin['Chart'];
       Release: HelmChartBuiltin['Release'];
     }>({
@@ -40,8 +41,8 @@ export const createChartContext = () => {
     createStage: () => {
       const steps: Step<any>[] = [];
       const stage = {
-        add: <Vars = unknown>(opt?: { name?: string }): Step<Vars> => {
-          const step = createStep({
+        add: (opt?: { name?: string }) => {
+          const step = createStep<(typeof context)['vars']>({
             name: opt?.name,
             vars: context.vars,
             addInstruction,

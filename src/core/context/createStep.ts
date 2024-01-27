@@ -1,6 +1,6 @@
 import { chart } from '../utils/format';
 import { type ChartUtils } from '../utils/type';
-import { createVarProxy } from '../varProxy';
+import { type VarProxy, createVarProxy, isVar } from '../varProxy';
 import { type Step } from './type';
 
 export const createStep = <T>(opt: {
@@ -38,11 +38,12 @@ export const createStep = <T>(opt: {
         addInstruction(chart`{{- end }}`);
       });
     },
-    assign: (name, value) => {
+    assign: <T>(name: string, value: VarProxy<T>) => {
       step.def(() => {
         addInstruction(chart`{{- $${name} := ${value} }}`);
       });
-      return createVarProxy({
+
+      return createVarProxy<T>({
         addInstruction,
         path: `${name}`,
       });

@@ -8,7 +8,11 @@ describe('plugins/pvc', () => {
       plugins: [pluginPvc],
     });
     expect(res).toMatchInlineSnapshot(`
-      "{{- if .Values.pvc }}
+      "{{- $values := .Values }}
+      {{- $chart := .Chart }}
+      {{- $release := .Release }}
+
+      {{- if .Values.pvc }}
       {{- /* Step pvc default */ -}}
       {{- range $key, $value := .Values.pvc -}}
       {{- $_ := set $value "name" ($value.name | default (printf "%s-%s" .Release.Name $key)) -}}

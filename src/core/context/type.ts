@@ -11,6 +11,6 @@ export interface Step<Vars> {
   comment: (str: string) => void;
   if: ChartIfBuilder;
   def: (fn: () => void) => void;
-  assign: <T = ChartVar>(name: string, value: T) => VarProxy<T>;
+  assign: <T>(name: string, value: VarProxy<T>) => VarProxy<T>;
   toString: () => string;
 }

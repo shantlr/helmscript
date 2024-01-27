@@ -30,15 +30,12 @@ export const chartcompose = ({ plugins }: { plugins: Plugin[] }) => {
   let vars: PluginVars;
   // #region init
   {
-    const step = allSteps.init.add<{
-      Values: ChartDict;
-      Chart: HelmChartBuiltin['Chart'];
-      Release: HelmChartBuiltin['Release'];
-    }>({ name: 'Init vars' });
+    const step = allSteps.init.add({ name: 'Init vars' });
 
+    // NOTE: we are bindig vars so they are still usable in nested range
     const values = step.assign('values', step.vars.Values);
-    const chart = step.assign('values', step.vars.Chart);
-    const release = step.assign('values', step.vars.Release);
+    const chart = step.assign('chart', step.vars.Chart);
+    const release = step.assign('release', step.vars.Release);
 
     vars = {
       Values: values,
