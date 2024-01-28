@@ -3,34 +3,54 @@ import {
   type ChartStringVar,
   type ChartBoolVar,
   type ChartNumVar,
-} from '../builder/baseVar';
+  type ChartExpression,
+} from '../core/builder/baseVar';
+import { type ChartDict } from '../core/builder/dict';
 import { chart } from '../utils/format';
 
-export type VarProxy<T> = {
-  [key in keyof T]: T[key] extends string
-    ? ChartStringVar
-    : T[key] extends boolean
-      ? ChartBoolVar
-      : T[key] extends number
-        ? ChartNumVar
-        : T[key] extends ChartVar
-          ? T[key]
-          : VarProxy<T[key]>;
-} & {
-  [key: string]: VarProxy<any>;
-};
+export type VarProxy<T> = T extends ChartDict
+  ? T
+  : {
+      [key in keyof T]: T[key] extends string
+        ? ChartStringVar
+        : T[key] extends boolean
+          ? ChartBoolVar
+          : T[key] extends number
+            ? ChartNumVar
+            : T[key] extends ChartVar
+              ? T[key]
+              : VarProxy<T[key]>;
+    };
 
 const fieldPath = Symbol('var:field-path');
 const isvar = Symbol('var:is-var');
-export const createVarProxy = <T>(opt: {
-  addInstruction: (str: string) => void;
+const isexpression = Symbol('var:is-expression');
+
+export const createExpression = (str: string): ChartExpression => {
+  return {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    [isexpression]: true,
+    $not: () => chart`not (${str})`,
+    $format: () => str,
+  };
+};
+
+/**
+ * Create a proxy for accessing variable
+ */
+export const createVarProxy = <T = any>(opt: {
+  addInstruction: (expr: ChartExpression) => void;
   path?: string;
 }): VarProxy<T> => {
   const target = {
     [isvar]: true,
+    [isexpression]: true,
     [fieldPath]: opt?.path ?? '',
   };
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
   return new Proxy(target, {
     get: (target, prop) => {
       if (typeof prop === 'string') {
@@ -40,13 +60,13 @@ export const createVarProxy = <T>(opt: {
               fn: (value: VarProxy<T>, key: VarProxy<string>) => void,
             ) => {
               opt.addInstruction(
-                `{{- range $key, $value := ${target[fieldPath]} -}}`,
+                chart`{{- range $key, $value := ${target[fieldPath]} -}}`,
               );
               fn(
                 createVarProxy({ ...opt, path: '$value' }),
                 createVarProxy({ ...opt, path: '$key' }),
               );
-              opt.addInstruction('{{- end -}}');
+              opt.addInstruction(chart`{{- end -}}`);
             };
           }
           case '$set': {
@@ -59,13 +79,17 @@ export const createVarProxy = <T>(opt: {
           case '$default': {
             return (value: any) => {
               return chart`${target[fieldPath]} | default (${value})`;
-              // opt.addInstruction(
-              //   `${} default ${target[fieldPath]} ${value} -}}`,
-              // );
             };
+          }
+          case '$not': {
+            return () => chart`not (${target[fieldPath]})`;
+          }
+          case '$format': {
+            return () => target[fieldPath] || '.';
           }
           default:
         }
+
         if (!(prop in target)) {
           target[prop] = createVarProxy({
             ...opt,
@@ -84,8 +108,9 @@ export const isVar = (obj: any): obj is VarProxy<any> => {
   }
   return obj[isvar] === true;
 };
-export const varAsPath = (varProxy: VarProxy<any>) => {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  return varProxy[fieldPath] || '.';
+export const isExpression = (obj: any): obj is ChartExpression => {
+  if (!obj) {
+    return false;
+  }
+  return obj[isexpression] === true;
 };

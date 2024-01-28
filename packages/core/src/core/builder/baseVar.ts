@@ -1,11 +1,16 @@
 import { type ChartDict } from './dict';
 
+export interface ChartExpression {
+  $not: () => ChartExpression;
+  $format: () => string;
+}
+
 export interface RangeBuilder {
   (fn: (value: ChartDict, key: ChartStringVar) => void): void;
   meta: (meta: { description: string }) => RangeBuilder;
 }
 
-export interface ChartVar {
+export interface ChartVar extends ChartExpression {
   $range: RangeBuilder;
   /**
    * equivalent to `{{- $_ := set $var field (value) -}}`
@@ -17,7 +22,7 @@ export interface ChartVar {
    * equivalent to
    * `$var | default (value)`
    */
-  $default: (value: string | ChartVar) => this;
+  $default: (value: ChartExpression) => this;
 }
 
 export interface ChartStringVar extends ChartVar {}

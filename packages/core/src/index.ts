@@ -1,7 +1,5 @@
-import { type PluginVars, type Plugin } from './core/plugins/type';
-import { createChartContext } from './core/context';
-import { type HelmChartBuiltin } from './types';
-import { type ChartDict } from './core/builder/dict';
+import { type Plugin, type PluginVars } from './engine/type';
+import { createChartComposeEngine } from './engine';
 
 export const chart = () => {};
 
@@ -15,12 +13,21 @@ export const secretFiles = () => {};
 
 export const library = () => {};
 
-export const chartcompose = ({ plugins }: { plugins: Plugin[] }) => {
-  const context = createChartContext();
+export const chartcompose = ({
+  dir,
+  plugins,
+}: {
+  dir: string;
+  plugins: Plugin[];
+}) => {
+  const context = createChartComposeEngine({
+    dir,
+  });
+  const compose = context.createFile('compose');
 
   const allSteps = {
-    init: context.createStage(),
-    initial: context.createStage(),
+    init: compose.createStage(),
+    initial: compose.createStage(),
   };
 
   const pluggableSteps = {
@@ -46,12 +53,17 @@ export const chartcompose = ({ plugins }: { plugins: Plugin[] }) => {
   // #endregion
 
   plugins.forEach((plugin) => {
-    plugin({
+    const pluginFile = context.createFile(`plugin_${plugin.name}`);
+    const define = (templateName: string, def: () => void) => {
+      return pluginFile.define(`plugin_${plugin.name}.${templateName}`, def);
+    };
+
+    plugin.run({
       vars,
+      define,
       stages: pluggableSteps,
     });
   });
 
-  const results = [allSteps.init.toString(), allSteps.initial.toString()];
-  return results.join('\n\n');
+  return context;
 };

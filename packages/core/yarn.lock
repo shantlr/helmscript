@@ -224,9 +224,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@helmscript/core@workspace:packages/core":
+"@helmscript/core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@helmscript/core@workspace:packages/core"
+  resolution: "@helmscript/core@workspace:."
   dependencies:
     "@types/lodash": "npm:^4.14.202"
     "@types/node": "npm:^20.11.8"
@@ -528,11 +528,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:^20.11.8":
-  version: 20.11.9
-  resolution: "@types/node@npm:20.11.9"
+  version: 20.11.8
+  resolution: "@types/node@npm:20.11.8"
   dependencies:
     undici-types: "npm:~5.26.4"
-  checksum: 72f32aa56e97863d0bfee0274ce450245c2e159104a15f0fb3ee389962dfec34de284a679323161f8cf6cdaae9141043e370571988215b94e653a40f9b60078a
+  checksum: cd4eff91ff2291b909cf8ce81f3117effcfd59c435a9d42a9a085f5de8f414eabfbe4558f53a275eedc280a97393d71084812d91cf31fba436a01369d80133b5
   languageName: node
   linkType: hard
 
@@ -2093,12 +2093,6 @@ __metadata:
   checksum: 5d415b114f410661208c95e7ab4879f1cc2765b8daceff4dc8718317d1cb7b9ffa7c5d1eafd9a4389c9aab7445d6ea88e05f3096cb1e529618b55304956b87fc
   languageName: node
   linkType: hard
-
-"helmscript@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "helmscript@workspace:."
-  languageName: unknown
-  linkType: soft
 
 "http-cache-semantics@npm:^4.1.1":
   version: 4.1.1

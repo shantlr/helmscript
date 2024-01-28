@@ -1,26 +1,10 @@
 {
   "name": "helmscript",
   "packageManager": "yarn@4.0.2",
-  "scripts": {
-    "test": "vitest"
-  },
-  "dependencies": {
-    "lodash": "^4.17.21"
-  },
-  "devDependencies": {
-    "@types/lodash": "^4.14.202",
-    "@types/node": "^20.11.8",
-    "@typescript-eslint/eslint-plugin": "^6.4.0",
-    "eslint": "^8.0.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-config-standard-with-typescript": "^43.0.1",
-    "eslint-plugin-import": "^2.25.2",
-    "eslint-plugin-n": "^15.0.0 || ^16.0.0 ",
-    "eslint-plugin-promise": "^6.0.0",
-    "prettier": "^3.2.4",
-    "ts-node": "^10.9.2",
-    "typescript": "*",
-    "vitest": "^1.2.2"
+  "workspaces": {
+    "packages": [
+      "packages/core"
+    ]
   },
   "volta": {
     "node": "20.11.0",
