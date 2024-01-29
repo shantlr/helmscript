@@ -46,7 +46,7 @@ export const createVarProxy = <T = any>(opt: {
   const target = {
     [isvar]: true,
     [isexpression]: true,
-    [fieldPath]: opt?.path ?? '',
+    [fieldPath]: opt?.path ?? '$',
   };
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -85,18 +85,28 @@ export const createVarProxy = <T = any>(opt: {
             return () => chart`not (${target[fieldPath]})`;
           }
           case '$format': {
-            return () => target[fieldPath] || '.';
+            return () => {
+              const p = target[fieldPath];
+              if (p === '$') {
+                return '$.';
+              }
+              return target[fieldPath];
+            };
           }
           default:
         }
 
         if (!(prop in target)) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
           target[prop] = createVarProxy({
             ...opt,
             path: `${target[fieldPath]}.${prop}`,
           });
         }
       }
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       return target[prop];
     },
   });

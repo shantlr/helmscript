@@ -1,7 +1,8 @@
-import { ChartExpression } from '../core/builder/baseVar';
+import { map } from 'lodash';
+import { type ChartExpression } from '../core/builder/baseVar';
 import { chart } from '../utils/format';
-import { createVarProxy } from '../varProxy';
-import { UseScope, type Step, Scope } from './type';
+import { createVarProxy, isVar } from '../varProxy';
+import { type UseScope, type Step, type Scope } from './type';
 
 export const createStep = <T>(opt: {
   name?: string;
@@ -21,10 +22,11 @@ export const createStep = <T>(opt: {
   const step: Step<T> = (fn) => {
     useScope(
       scope,
-      () =>
+      () => {
         fn({
           write: addInstruction,
-        }),
+        });
+      },
       true,
     );
   };
@@ -55,8 +57,18 @@ export const createStep = <T>(opt: {
       path: `${name}`,
     });
   }) as Step<T>['assign'];
-  step.include = (template) => {
+  step.include = (template, params) => {
     step(() => {
+      if (isVar(params)) {
+        addInstruction(chart`{{- include "${template.name}" ${params} }}`);
+        return;
+      }
+      if (params) {
+        addInstruction(
+          chart`{{- include "${template.name}" (dict ${map(params, (p, key) => chart`"${key}" ${p}`)}) }}`,
+        );
+        return;
+      }
       addInstruction(chart`{{- include "${template.name}" }}`);
     });
   };

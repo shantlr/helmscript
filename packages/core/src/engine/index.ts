@@ -1,19 +1,20 @@
-import { type ChartUtils } from '../utils/type';
 import { createVarProxy } from '../varProxy';
 import {
   type ChartFile,
   type ChartComposeEngine,
   type Step,
-  UseScope,
-  Scope,
-  ChartComposeEngineStage,
+  type UseScope,
+  type Scope,
+  type ChartComposeEngineStage,
 } from './type';
 import { createStep } from './createStep';
 import { type HelmChartBuiltin } from '../types';
 import { type ChartDict } from '../core/builder/dict';
-import { ChartExpression } from '../core/builder/baseVar';
+import { type ChartExpression } from '../core/builder/baseVar';
 import { chart } from '../utils/format';
 import { sortBy } from 'lodash';
+import { writeFile } from 'fs/promises';
+import path from 'path';
 
 const createFile = ({
   path,
@@ -68,7 +69,7 @@ const createFile = ({
       const step = defineStage.add({ name });
       step(({ write }) => {
         write(chart`{{- define "${name}" }}`);
-        def({ step, write });
+        def({ step, params: createVarProxy({ addInstruction: write }), write });
         write(chart`{{- end }}`);
       });
       return {
@@ -84,7 +85,7 @@ const createFile = ({
   return file;
 };
 
-export const createChartComposeEngine = ({ dir }: { dir: string }) => {
+export const createChartComposeEngine = () => {
   const stack: Scope[] = [];
   const useScope = (scope: Scope, fn: () => void) => {
     try {
@@ -108,14 +109,20 @@ export const createChartComposeEngine = ({ dir }: { dir: string }) => {
     files,
     createFile: (path) => {
       const file = createFile({
-        path: `${dir}/${path}`,
+        path: `${path}`,
         useScope,
         addInstruction,
       });
       files.push(file);
       return file;
     },
-    write: async () => {},
+    write: async ({ dir }) => {
+      await Promise.all(
+        files.map(async (f) => {
+          await writeFile(path.resolve(dir, f.path), f.toString());
+        }),
+      );
+    },
     toString: () => {
       return sortBy(files, (f) => f.path)
         .map((f) => `${f.path}:\n${f.toString()}`)

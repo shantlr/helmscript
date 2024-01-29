@@ -1,7 +1,6 @@
 import { type HelmChartBuiltin } from '../types';
 import { type ChartExpression, type ChartVar } from '../core/builder/baseVar';
 import { type ChartDict } from '../core/builder/dict';
-import { type ChartUtils } from '../core/utils/type';
 import { type VarProxy } from '../varProxy';
 
 /**
@@ -14,6 +13,14 @@ export type Scope = {
  * Add Scope to stack and execute fn
  */
 export type UseScope = (scope: Scope, fn: () => void, uniq?: boolean) => void;
+
+export type StepInclude = {
+  <TemplateParams>(
+    template: ChartTemplate<TemplateParams>,
+    params: TemplateParams,
+  ): void;
+  (template: ChartTemplate<undefined>, params?: undefined): void;
+};
 
 export interface Step<Vars> {
   name: string;
@@ -31,7 +38,7 @@ export interface Step<Vars> {
         ? T
         : VarProxy<T>,
   ) => T extends VarProxy<infer U> ? VarProxy<U> : VarProxy<T>;
-  include: (template: ChartDefine) => void;
+  include: StepInclude;
   toString: () => string;
 }
 export interface StepBuilder<Vars> {
@@ -58,25 +65,26 @@ export type ChartComposeEngineStage = {
 export type ChartFile = {
   path: string;
   createStage: () => ChartComposeEngineStage;
-  define: (
+  define: <TemplateParams>(
     name: string,
     def: (arg: {
       step: Step<any>;
+      params: VarProxy<TemplateParams>;
       write: (expr: ChartExpression) => void;
     }) => void,
-  ) => ChartDefine;
+  ) => ChartTemplate<TemplateParams>;
   toString: () => string;
 };
 
 export type ChartComposeEngine = {
   files: ChartFile[];
   createFile: (path: string) => ChartFile;
-  write: (opt: { dir: string }) => void;
+  write: (opt: { dir: string }) => Promise<void>;
 
   toString: () => string;
 };
 
-export interface ChartDefine {
+export interface ChartTemplate<Params> {
   name: string;
 }
 
@@ -85,7 +93,13 @@ export interface PluginContext {
   stages: {
     initial: StepBuilder<PluginVars>;
   };
-  define: (name: string, def: () => void) => ChartDefine;
+  define: <T>(
+    name: string,
+    def: (arg: {
+      params: VarProxy<T>;
+      write: (expr: ChartExpression) => void;
+    }) => void,
+  ) => ChartTemplate<VarProxy<T>>;
 }
 export type Plugin = {
   name: string;

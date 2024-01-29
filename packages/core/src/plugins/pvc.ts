@@ -1,5 +1,6 @@
 import { type Plugin } from '../engine/type';
 import { printf } from '../fn';
+import { chart } from '../utils/format';
 
 export const pluginPvc: Plugin = {
   name: 'pvc',
@@ -7,6 +8,46 @@ export const pluginPvc: Plugin = {
     const step = context.stages.initial.add({
       name: 'Init PVC',
     });
+    const template = context.define<{
+      pvc: {
+        name: string;
+      };
+    }>('pvc', ({ params: { pvc }, write }) => {
+      write(chart`---
+{{- with ${pvc} }}
+kind: PersistenVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .name }}
+spec:
+  accessModes:
+    {{ toYaml .accessModes | nindent 4 }}
+  storageClassName: {{ .storageClassName }}
+  {{- with .resources }}
+  resources:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .selector }}
+  selector:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .volumeMode }}
+  volumeMode: {{ . }}
+  {{- end }}
+  {{- with .volumeName }}
+  volumeName: {{ . }}
+  {{- end }}
+  {{- with .dataSource }}
+  dataSource:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .storageos }}
+  storageos:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+{{- end}}`);
+    });
+
     const {
       vars: {
         Release,
@@ -14,16 +55,12 @@ export const pluginPvc: Plugin = {
       },
     } = step;
 
-    const template = context.define('pvc', () => {
-      //
-    });
-
     step.if(pvc, () => {
       step.comment('Step pvc default');
       pvc.$range((pvc, key) => {
         pvc.$set('name', pvc.name.$default(printf('%s-%s', Release.Name, key)));
         step.if(pvc.external.$not(), () => {
-          step.include(template, pvc);
+          step.include(template, { pvc });
         });
       });
     });

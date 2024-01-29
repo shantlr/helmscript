@@ -1,7 +1,10 @@
-import { type Plugin, type PluginVars } from './engine/type';
+import {
+  type PluginContext,
+  type Plugin,
+  type PluginVars,
+} from './engine/type';
 import { createChartComposeEngine } from './engine';
-
-export const chart = () => {};
+import { createVarProxy } from './varProxy';
 
 export const netpols = () => {};
 
@@ -20,9 +23,7 @@ export const chartcompose = ({
   dir: string;
   plugins: Plugin[];
 }) => {
-  const context = createChartComposeEngine({
-    dir,
-  });
+  const context = createChartComposeEngine();
   const compose = context.createFile('compose');
 
   const allSteps = {
@@ -39,22 +40,23 @@ export const chartcompose = ({
   {
     const step = allSteps.init.add({ name: 'Init vars' });
 
-    // NOTE: we are bindig vars so they are still usable in nested range
-    const values = step.assign('values', step.vars.Values);
-    const chart = step.assign('chart', step.vars.Chart);
-    const release = step.assign('release', step.vars.Release);
+    vars = step.vars;
+    // // NOTE: we are bindig vars so they are still usable in nested range
+    // const values = step.assign('values', step.vars.Values);
+    // const chart = step.assign('chart', step.vars.Chart);
+    // const release = step.assign('release', step.vars.Release);
 
-    vars = {
-      Values: values,
-      Chart: chart,
-      Release: release,
-    };
+    // vars = {
+    //   Values: values,
+    //   Chart: chart,
+    //   Release: release,
+    // };
   }
   // #endregion
 
   plugins.forEach((plugin) => {
     const pluginFile = context.createFile(`plugin_${plugin.name}`);
-    const define = (templateName: string, def: () => void) => {
+    const define: PluginContext['define'] = (templateName, def) => {
       return pluginFile.define(`plugin_${plugin.name}.${templateName}`, def);
     };
 
