@@ -15,7 +15,7 @@ describe('plugins/pvc', () => {
       {{- range $key, $value := $.Values.pvc -}}
       {{- $_ := set $value "name" ($value.name | default (printf "%s-%s" $.Release.Name $key)) -}}
       {{- if not ($value.external) }}
-      {{- include "plugin_pvc.pvc" (dict "pvc" $value) }}
+      {{- include "plugin_pvc.pvc" (dict "pvc" ($value)) }}
       {{- end }}
       {{- end -}}
       {{- end }}

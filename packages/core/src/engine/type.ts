@@ -1,7 +1,10 @@
 import { type HelmChartBuiltin } from '../types';
-import { type ChartExpression, type ChartVar } from '../core/builder/baseVar';
-import { type ChartDict } from '../core/builder/dict';
-import { type VarProxy } from '../varProxy';
+import {
+  type ChartExpression,
+  type ChartDict,
+  type ChartVar,
+  type ChartVarToPartialLiteral,
+} from '../core/builder/baseVar';
 
 /**
  * Scope for adding instructions
@@ -17,7 +20,7 @@ export type UseScope = (scope: Scope, fn: () => void, uniq?: boolean) => void;
 export type StepInclude = {
   <TemplateParams>(
     template: ChartTemplate<TemplateParams>,
-    params: TemplateParams,
+    params: ChartVarToPartialLiteral<TemplateParams>,
   ): void;
   (template: ChartTemplate<undefined>, params?: undefined): void;
 };
@@ -30,14 +33,7 @@ export interface Step<Vars> {
 
   comment: (str: string) => void;
   if: (condition: ChartExpression, fn: () => void) => void;
-  assign: <T>(
-    name: string,
-    value: T extends ChartVar
-      ? T | VarProxy<T>
-      : T extends VarProxy<any>
-        ? T
-        : VarProxy<T>,
-  ) => T extends VarProxy<infer U> ? VarProxy<U> : VarProxy<T>;
+  assign: <T extends ChartExpression>(name: string, value: T) => T;
   include: StepInclude;
   toString: () => string;
 }
@@ -46,9 +42,9 @@ export interface StepBuilder<Vars> {
 }
 
 export type PluginVars = {
-  Values: VarProxy<ChartDict>;
-  Chart: VarProxy<HelmChartBuiltin['Chart']>;
-  Release: VarProxy<HelmChartBuiltin['Release']>;
+  Values: ChartDict;
+  Chart: ChartDict<HelmChartBuiltin['Chart']>;
+  Release: ChartDict<HelmChartBuiltin['Release']>;
 };
 
 export type ChartComposeEngineStage = {
@@ -69,7 +65,7 @@ export type ChartFile = {
     name: string,
     def: (arg: {
       step: Step<any>;
-      params: VarProxy<TemplateParams>;
+      params: TemplateParams;
       write: (expr: ChartExpression) => void;
     }) => void,
   ) => ChartTemplate<TemplateParams>;
@@ -84,6 +80,7 @@ export type ChartComposeEngine = {
   toString: () => string;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface ChartTemplate<Params> {
   name: string;
 }
@@ -93,13 +90,13 @@ export interface PluginContext {
   stages: {
     initial: StepBuilder<PluginVars>;
   };
-  define: <T>(
+  define: <Param>(
     name: string,
     def: (arg: {
-      params: VarProxy<T>;
+      params: Param;
       write: (expr: ChartExpression) => void;
     }) => void,
-  ) => ChartTemplate<VarProxy<T>>;
+  ) => ChartTemplate<Param extends ChartVar ? Param : ChartDict<Param>>;
 }
 export type Plugin = {
   name: string;

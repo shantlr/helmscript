@@ -4,8 +4,9 @@ import {
   type ChartBoolVar,
   type ChartNumVar,
   type ChartExpression,
+  type ChartDict,
+  type ChartAny,
 } from '../core/builder/baseVar';
-import { type ChartDict } from '../core/builder/dict';
 import { chart } from '../utils/format';
 
 export type VarProxy<T> = T extends ChartDict
@@ -32,14 +33,25 @@ export const createExpression = (str: string): ChartExpression => {
     // @ts-expect-error
     [isexpression]: true,
     $not: () => chart`not (${str})`,
+    $default: (value: any) => {
+      if (typeof value === 'string') {
+        return chart`${str} | default "${value}"`;
+      }
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return chart`${str} | default ${value}`;
+      }
+      return chart`${str} | default (${value})`;
+    },
     $format: () => str,
+
+    $wrapPth: () => createExpression(`(${str})`),
   };
 };
 
 /**
  * Create a proxy for accessing variable
  */
-export const createVarProxy = <T = any>(opt: {
+export const createVarProxy = <T = ChartDict>(opt: {
   addInstruction: (expr: ChartExpression) => void;
   path?: string;
 }): VarProxy<T> => {
@@ -76,13 +88,9 @@ export const createVarProxy = <T = any>(opt: {
               );
             };
           }
-          case '$default': {
-            return (value: any) => {
-              return chart`${target[fieldPath]} | default (${value})`;
-            };
-          }
+          case '$default':
           case '$not': {
-            return () => chart`not (${target[fieldPath]})`;
+            return createExpression(`${target[fieldPath]}`)[prop];
           }
           case '$format': {
             return () => {
@@ -109,10 +117,24 @@ export const createVarProxy = <T = any>(opt: {
       // @ts-expect-error
       return target[prop];
     },
+    set: (target, prop, value) => {
+      if (typeof prop === 'string') {
+        if (typeof value === 'string') {
+          opt.addInstruction(
+            chart`{{- $_ := set ${target[fieldPath]} "${prop}" "${value}" -}}`,
+          );
+        } else {
+          opt.addInstruction(
+            chart`{{- $_ := set ${target[fieldPath]} "${prop}" (${value}) -}}`,
+          );
+        }
+      }
+      return true;
+    },
   });
 };
 
-export const isVar = (obj: any): obj is VarProxy<any> => {
+export const isVar = (obj: any): obj is ChartAny => {
   if (!obj) {
     return false;
   }

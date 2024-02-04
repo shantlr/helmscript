@@ -1,15 +1,15 @@
 import { isArray } from 'lodash';
 import { createExpression, isExpression } from '../varProxy';
-import { ChartExpression } from '../core/builder/baseVar';
+import { type ChartExpression } from '../core/builder/baseVar';
 
-const mapArg = (any: any): any => {
+const mapArg = (any: any): string => {
   if (isArray(any)) {
     return any.map(mapArg).join(' ');
   }
   if (isExpression(any)) {
     return any.$format();
   }
-  return any;
+  return any.toString();
 };
 
 export const chart = (

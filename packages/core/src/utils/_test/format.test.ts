@@ -13,20 +13,27 @@ describe('core/utils/format', () => {
 
   it('should interporlate var', () => {
     const v = createVarProxy({ addInstruction: () => {} });
-    expect(chart`hello ${v}`.$format()).toBe('hello .');
-    expect(chart`world ${v.field}`.$format()).toBe('world .field');
+    expect(chart`hello ${v}`.$format()).toBe('hello $.');
+    expect(chart`world ${v.field}`.$format()).toBe('world $.field');
     expect(chart`{{ ${v.field.nested} }}`.$format()).toBe(
-      '{{ .field.nested }}',
+      '{{ $.field.nested }}',
     );
   });
 
   it('should interpolate array of string', () => {
     expect(chart`hello ${['world', 'foo']}`.$format()).toBe('hello world foo');
   });
+
   it('should interpolate array with vars', () => {
     const v = createVarProxy({ addInstruction: () => {} });
-    expect(chart`hello ${['world', v, v.test]}`.$format()).toBe(
-      'hello world . .test',
-    );
+    expect(
+      chart`hello ${['world', v, v.test]}`.$format(),
+    ).toMatchInlineSnapshot(`"hello world $. $.test"`);
+  });
+
+  it('should interpolate array of expressions', () => {
+    expect(
+      chart`hello ${[chart`world`, chart`test`]}`.$format(),
+    ).toMatchInlineSnapshot(`"hello world test"`);
   });
 });

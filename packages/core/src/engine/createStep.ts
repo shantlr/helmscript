@@ -1,8 +1,8 @@
-import { map } from 'lodash';
 import { type ChartExpression } from '../core/builder/baseVar';
 import { chart } from '../utils/format';
-import { createVarProxy, isVar } from '../varProxy';
+import { createVarProxy } from '../varProxy';
 import { type UseScope, type Step, type Scope } from './type';
+import { valueFromPartialLiteral } from './utils/valueFromPartialLiteral';
 
 export const createStep = <T>(opt: {
   name?: string;
@@ -59,13 +59,9 @@ export const createStep = <T>(opt: {
   }) as Step<T>['assign'];
   step.include = (template, params) => {
     step(() => {
-      if (isVar(params)) {
-        addInstruction(chart`{{- include "${template.name}" ${params} }}`);
-        return;
-      }
       if (params) {
         addInstruction(
-          chart`{{- include "${template.name}" (dict ${map(params, (p, key) => chart`"${key}" ${p}`)}) }}`,
+          chart`{{- include "${template.name}" (${valueFromPartialLiteral(params)}) }}`,
         );
         return;
       }

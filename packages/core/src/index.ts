@@ -4,7 +4,6 @@ import {
   type PluginVars,
 } from './engine/type';
 import { createChartComposeEngine } from './engine';
-import { createVarProxy } from './varProxy';
 
 export const netpols = () => {};
 
@@ -14,15 +13,7 @@ export const vault = () => {};
 
 export const secretFiles = () => {};
 
-export const library = () => {};
-
-export const chartcompose = ({
-  dir,
-  plugins,
-}: {
-  dir: string;
-  plugins: Plugin[];
-}) => {
+export const chartcompose = ({ plugins }: { plugins: Plugin[] }) => {
   const context = createChartComposeEngine();
   const compose = context.createFile('compose');
 
@@ -39,18 +30,7 @@ export const chartcompose = ({
   // #region init
   {
     const step = allSteps.init.add({ name: 'Init vars' });
-
     vars = step.vars;
-    // // NOTE: we are bindig vars so they are still usable in nested range
-    // const values = step.assign('values', step.vars.Values);
-    // const chart = step.assign('chart', step.vars.Chart);
-    // const release = step.assign('release', step.vars.Release);
-
-    // vars = {
-    //   Values: values,
-    //   Chart: chart,
-    //   Release: release,
-    // };
   }
   // #endregion
 
