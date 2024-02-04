@@ -67,3 +67,17 @@ export type ChartVarToPartialLiteral<T> =
                   ? boolean | ChartBoolVar
                   : T)
         | ChartAny;
+
+export type PartialLiteralToChartVar<T> = T extends ChartVar
+  ? T
+  : T extends Record<string, any>
+    ? ChartDict<{
+        [key in keyof T]: PartialLiteralToChartVar<T[key]>;
+      }>
+    : T extends string
+      ? ChartStringVar
+      : T extends number
+        ? ChartNumVar
+        : T extends boolean
+          ? ChartBoolVar
+          : T;

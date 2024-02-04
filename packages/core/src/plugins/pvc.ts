@@ -1,6 +1,5 @@
 import { type Plugin } from '../engine/type';
 import { printf } from '../fn';
-import { chart } from '../utils/format';
 
 export const pluginPvc: Plugin = {
   name: 'pvc',
@@ -12,8 +11,15 @@ export const pluginPvc: Plugin = {
       pvc: {
         name: string;
       };
-    }>('pvc', ({ params: { pvc }, write }) => {
-      write(chart`---
+    }>(
+      'pvc',
+      ({
+        fragment: {
+          vars: { pvc },
+        },
+        write,
+      }) => {
+        write`---
 {{- with ${pvc} }}
 kind: PersistenVolumeClaim
 apiVersion: v1
@@ -45,22 +51,26 @@ spec:
   storageos:
     {{ toYaml . | nindent 4 }}
   {{- end }}
-{{- end}}`);
-    });
+{{- end}}`;
+      },
+    );
 
     const {
       vars: {
         Release,
         Values: { pvc },
       },
+      $if,
+      $comment,
+      $include,
     } = step;
 
-    step.if(pvc, () => {
-      step.comment('Step pvc default');
+    $if(pvc, () => {
+      $comment('Step pvc default');
       pvc.$range((pvc, key) => {
         pvc.$set('name', pvc.name.$default(printf('%s-%s', Release.Name, key)));
-        step.if(pvc.external.$not(), () => {
-          step.include(template, { pvc });
+        $if(pvc.external.$not(), () => {
+          $include(template, { pvc });
         });
       });
     });

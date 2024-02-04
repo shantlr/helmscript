@@ -4,7 +4,9 @@ import {
   type ChartDict,
   type ChartVar,
   type ChartVarToPartialLiteral,
+  type PartialLiteralToChartVar,
 } from '../core/builder/baseVar';
+import { type WriteChart } from '../varProxy';
 
 /**
  * Scope for adding instructions
@@ -25,20 +27,30 @@ export type StepInclude = {
   (template: ChartTemplate<undefined>, params?: undefined): void;
 };
 
-export interface Step<Vars> {
+interface IfElse {
+  elseif: (condition: ChartExpression, fn: () => void) => IfElse;
+  else: (fn: () => void) => void;
+}
+type If = (
+  condition: ChartExpression,
+  fn: () => void,
+  elseif?: (c: IfElse) => void,
+) => void;
+export interface ChartFragment<Vars> {
   name: string;
-  (fn: (arg: { write: (expr: ChartExpression) => void }) => void): void;
+  (fn: (arg: { write: WriteChart }) => void): void;
 
-  vars: Vars;
+  vars: PartialLiteralToChartVar<Vars>;
 
-  comment: (str: string) => void;
-  if: (condition: ChartExpression, fn: () => void) => void;
-  assign: <T extends ChartExpression>(name: string, value: T) => T;
-  include: StepInclude;
+  $comment: (str: string) => void;
+  $if: If;
+  $assign: <T extends ChartExpression>(name: string, value: T) => T;
+  $include: StepInclude;
+
   toString: () => string;
 }
 export interface StepBuilder<Vars> {
-  add: (opt?: { name: string }) => Step<Vars>;
+  add: (opt?: { name: string }) => ChartFragment<Vars>;
 }
 
 export type PluginVars = {
@@ -51,7 +63,7 @@ export type ChartComposeEngineStage = {
   /**
    * Add step into stage
    */
-  add: (opt?: { name?: string }) => Step<PluginVars>;
+  add: <Params = PluginVars>(opt?: { name?: string }) => ChartFragment<Params>;
   /**
    * Format stage into helm chart format
    */
@@ -64,9 +76,8 @@ export type ChartFile = {
   define: <TemplateParams>(
     name: string,
     def: (arg: {
-      step: Step<any>;
-      params: TemplateParams;
-      write: (expr: ChartExpression) => void;
+      fragment: ChartFragment<TemplateParams>;
+      write: WriteChart;
     }) => void,
   ) => ChartTemplate<TemplateParams>;
   toString: () => string;
@@ -92,10 +103,7 @@ export interface PluginContext {
   };
   define: <Param>(
     name: string,
-    def: (arg: {
-      params: Param;
-      write: (expr: ChartExpression) => void;
-    }) => void,
+    def: (arg: { fragment: ChartFragment<Param>; write: WriteChart }) => void,
   ) => ChartTemplate<Param extends ChartVar ? Param : ChartDict<Param>>;
 }
 export type Plugin = {

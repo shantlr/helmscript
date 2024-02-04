@@ -1,49 +1,42 @@
-import { createVarProxy } from '../varProxy';
+import { type WriteChart, createVarProxy } from '../varProxy';
 import {
   type ChartFile,
   type ChartComposeEngine,
-  type Step,
+  type ChartFragment,
   type UseScope,
   type Scope,
   type ChartComposeEngineStage,
 } from './type';
 import { createStep } from './createStep';
-import { type HelmChartBuiltin } from '../types';
-import { type ChartDict } from '../core/builder/dict';
-import { type ChartExpression } from '../core/builder/baseVar';
-import { chart } from '../utils/format';
 import { sortBy } from 'lodash';
 import { writeFile } from 'fs/promises';
 import path from 'path';
+import { createWriteChart } from './utils/createWrite';
 
 const createFile = ({
   path,
   useScope,
-  addInstruction,
+  write,
 }: {
   path: string;
   useScope: UseScope;
-  addInstruction: (expr: ChartExpression) => void;
+  write: WriteChart;
 }): ChartFile => {
-  const vars = createVarProxy<{
-    Values: ChartDict;
-    Chart: HelmChartBuiltin['Chart'];
-    Release: HelmChartBuiltin['Release'];
-  }>({
-    addInstruction,
+  const vars = createVarProxy<any>({
+    write,
   });
 
   const fileStages: ChartComposeEngineStage[] = [];
 
   const createStage: ChartFile['createStage'] = () => {
-    const steps: Step<any>[] = [];
+    const steps: ChartFragment<any>[] = [];
     const stage: ChartComposeEngineStage = {
       add: (opt?: { name?: string }) => {
-        const step = createStep<typeof vars>({
+        const step = createStep<any>({
           name: opt?.name,
-          vars,
-          addInstruction,
           useScope,
+          vars,
+          write,
         });
 
         steps.push(step);
@@ -66,11 +59,11 @@ const createFile = ({
   const file: ChartFile = {
     path: `${path}.yaml`,
     define: (name, def) => {
-      const step = defineStage.add({ name });
+      const step = defineStage.add<any>({ name });
       step(({ write }) => {
-        write(chart`{{- define "${name}" }}`);
-        def({ step, params: createVarProxy({ addInstruction: write }), write });
-        write(chart`{{- end }}`);
+        write`{{- define "${name}" }}`;
+        def({ fragment: step, write });
+        write`{{- end }}`;
       });
       return {
         name,
@@ -95,13 +88,13 @@ export const createChartComposeEngine = () => {
       stack.pop();
     }
   };
-  const addInstruction = (instr: ChartExpression) => {
+  const write = createWriteChart((expr) => {
     const last = stack[stack.length - 1];
     if (!last) {
       throw new Error('Stack is empty');
     }
-    last.add(instr);
-  };
+    last.add(expr);
+  });
 
   const files: ChartFile[] = [];
 
@@ -110,8 +103,8 @@ export const createChartComposeEngine = () => {
     createFile: (path) => {
       const file = createFile({
         path: `${path}`,
+        write,
         useScope,
-        addInstruction,
       });
       files.push(file);
       return file;

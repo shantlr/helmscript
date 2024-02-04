@@ -5,7 +5,6 @@ import { pluginPvc } from '../pvc';
 describe('plugins/pvc', () => {
   it('should', () => {
     const res = chartcompose({
-      dir: './chart',
       plugins: [pluginPvc],
     });
     expect(res.toString()).toMatchInlineSnapshot(`

@@ -9,6 +9,8 @@ import {
 } from '../core/builder/baseVar';
 import { chart } from '../utils/format';
 
+export type WriteChart = (...params: Parameters<typeof chart>) => void;
+
 export type VarProxy<T> = T extends ChartDict
   ? T
   : {
@@ -26,12 +28,14 @@ export type VarProxy<T> = T extends ChartDict
 const fieldPath = Symbol('var:field-path');
 const isvar = Symbol('var:is-var');
 const isexpression = Symbol('var:is-expression');
+const expreStr = Symbol('var:epxression-str');
 
 export const createExpression = (str: string): ChartExpression => {
   return {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     [isexpression]: true,
+    [expreStr]: str,
     $not: () => chart`not (${str})`,
     $default: (value: any) => {
       if (typeof value === 'string') {
@@ -52,7 +56,8 @@ export const createExpression = (str: string): ChartExpression => {
  * Create a proxy for accessing variable
  */
 export const createVarProxy = <T = ChartDict>(opt: {
-  addInstruction: (expr: ChartExpression) => void;
+  write: WriteChart;
+  // addInstruction: (expr: ChartExpression) => void;
   path?: string;
 }): VarProxy<T> => {
   const target = {
@@ -71,21 +76,17 @@ export const createVarProxy = <T = ChartDict>(opt: {
             return (
               fn: (value: VarProxy<T>, key: VarProxy<string>) => void,
             ) => {
-              opt.addInstruction(
-                chart`{{- range $key, $value := ${target[fieldPath]} -}}`,
-              );
+              opt.write`{{- range $key, $value := ${target[fieldPath]} -}}`;
               fn(
                 createVarProxy({ ...opt, path: '$value' }),
                 createVarProxy({ ...opt, path: '$key' }),
               );
-              opt.addInstruction(chart`{{- end -}}`);
+              opt.write`{{- end -}}`;
             };
           }
           case '$set': {
             return (key: string, value: any) => {
-              opt.addInstruction(
-                chart`{{- $_ := set ${target[fieldPath]} "${key}" (${value}) -}}`,
-              );
+              opt.write`{{- $_ := set ${target[fieldPath]} "${key}" (${value}) -}}`;
             };
           }
           case '$default':
@@ -120,13 +121,9 @@ export const createVarProxy = <T = ChartDict>(opt: {
     set: (target, prop, value) => {
       if (typeof prop === 'string') {
         if (typeof value === 'string') {
-          opt.addInstruction(
-            chart`{{- $_ := set ${target[fieldPath]} "${prop}" "${value}" -}}`,
-          );
+          opt.write`{{- $_ := set ${target[fieldPath]} "${prop}" "${value}" -}}`;
         } else {
-          opt.addInstruction(
-            chart`{{- $_ := set ${target[fieldPath]} "${prop}" (${value}) -}}`,
-          );
+          opt.write`{{- $_ := set ${target[fieldPath]} "${prop}" (${value}) -}}`;
         }
       }
       return true;

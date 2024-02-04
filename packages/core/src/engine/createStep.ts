@@ -1,16 +1,23 @@
-import { type ChartExpression } from '../core/builder/baseVar';
-import { chart } from '../utils/format';
-import { createVarProxy } from '../varProxy';
-import { type UseScope, type Step, type Scope } from './type';
+import {
+  type PartialLiteralToChartVar,
+  type ChartExpression,
+} from '../core/builder/baseVar';
+import { type WriteChart, createVarProxy } from '../varProxy';
+import {
+  type UseScope,
+  type ChartFragment,
+  type Scope,
+  type ChartTemplate,
+} from './type';
 import { valueFromPartialLiteral } from './utils/valueFromPartialLiteral';
 
 export const createStep = <T>(opt: {
   name?: string;
-  vars: T;
-  addInstruction: (expr: ChartExpression) => void;
   useScope: UseScope;
-}): Step<T> => {
-  const { addInstruction, useScope } = opt;
+  vars: T;
+  write: WriteChart;
+}): ChartFragment<T> => {
+  const { useScope } = opt;
 
   const instructions: ChartExpression[] = [];
   const scope: Scope = {
@@ -19,12 +26,12 @@ export const createStep = <T>(opt: {
     },
   };
 
-  const step: Step<T> = (fn) => {
+  const step: ChartFragment<T> = (fn) => {
     useScope(
       scope,
       () => {
         fn({
-          write: addInstruction,
+          write: opt.write,
         });
       },
       true,
@@ -34,38 +41,59 @@ export const createStep = <T>(opt: {
     value: opt?.name ?? 'unamed-step',
     enumerable: true,
   });
-  step.vars = opt.vars;
-  step.comment = (str) => {
+  step.vars = opt.vars as PartialLiteralToChartVar<any>;
+  step.$comment = (str) => {
     step(() => {
-      addInstruction(chart`{{- /* ${str} */ -}}`);
+      opt.write`{{- /* ${str} */ -}}`;
     });
   };
-  step.if = (condition, fn) => {
+  step.$if = (condition, fn, chain) => {
+    const createElseif = () => {
+      return {
+        elseif: (condition: ChartExpression, fn: () => void) => {
+          step(() => {
+            opt.write`{{- else if ${condition} }}`;
+            fn();
+          });
+
+          return createElseif();
+        },
+        else: (fn: () => void) => {
+          step(() => {
+            opt.write`{{- else }}`;
+            fn();
+          });
+        },
+      };
+    };
+
     step(() => {
-      addInstruction(chart`{{- if ${condition} }}`);
+      opt.write`{{- if ${condition} }}`;
       fn();
-      addInstruction(chart`{{- end }}`);
+      if (chain) {
+        chain(createElseif());
+      }
+      opt.write`{{- end }}`;
     });
   };
-  step.assign = ((name: string, value) => {
+  step.$assign = ((name: string, value) => {
     step(() => {
-      addInstruction(chart`{{- $${name} := ${value} }}`);
+      opt.write`{{- $${name} := ${value} }}`;
     });
 
     return createVarProxy({
-      addInstruction,
+      write: opt.write,
       path: `${name}`,
     });
-  }) as Step<T>['assign'];
-  step.include = (template, params) => {
+  }) as ChartFragment<T>['$assign'];
+
+  step.$include = (template: ChartTemplate<any>, params: any) => {
     step(() => {
       if (params) {
-        addInstruction(
-          chart`{{- include "${template.name}" (${valueFromPartialLiteral(params)}) }}`,
-        );
+        opt.write`{{- include "${template.name}" (${valueFromPartialLiteral(params)}) }}`;
         return;
       }
-      addInstruction(chart`{{- include "${template.name}" }}`);
+      opt.write`{{- include "${template.name}" }}`;
     });
   };
 

@@ -41,7 +41,7 @@ spec:
       Release,
     } = step.vars;
 
-    step.if(services, () => {
+    step.$if(services, () => {
       services.$range((service) => {
         service.$set(
           'name',

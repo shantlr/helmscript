@@ -1,15 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createVarProxy } from '..';
-import { type ChartExpression } from '../../core/builder/baseVar';
+import { chart } from '../../utils/format';
 
 describe('varProxy/set', () => {
   it('should add a set instruction', () => {
     const res: string[] = [];
-    const fn = vi.fn((expr: ChartExpression) => res.push(expr.$format()));
+    const fn = vi.fn((...args: Parameters<typeof chart>) =>
+      res.push(chart(...args).$format()),
+    );
     const varProxy = createVarProxy({
-      addInstruction: fn,
+      write: fn,
     });
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     varProxy.field = 'hello world';
     expect(res.join('\n')).toMatchInlineSnapshot(
       `"{{- $_ := set $ "field" "hello world" -}}"`,
