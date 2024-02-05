@@ -2,7 +2,7 @@ import {
   type PluginContext,
   type Plugin,
   type PluginVars,
-} from './engine/type';
+} from './engine/types';
 import { createChartComposeEngine } from './engine';
 
 export const netpols = () => {};

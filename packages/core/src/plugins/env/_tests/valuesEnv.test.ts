@@ -9,13 +9,20 @@ describe('plugin/valuesEnv', () => {
     });
     expect(res.toString()).toMatchInlineSnapshot(`
       "compose.yaml:
+      {{- $configmaps := (dict) }}
       {{- if $.Values.env }}
       {{- range $key, $value := $.Values.env -}}
+      {{- $name := (printf "%s-%s-env" $.Release.Name $key) }}
+      {{- if (hasKey $configmaps $name) }}
+      ({{ fail (printf "ConfigMap %s already exists" $name) }})
+      {{- end }}
+      {{- $cm := (dict "name" $name) }}
+      {{- $_ := set $configmaps $name $cm -}}
       {{- end -}}
       {{- end }}
 
       plugin_valuesEnv.yaml:
-      {{- define "plugin_valuesEnv.env-as-configmap" }}
+      {{- define ""plugin_valuesEnv.env-as-configmap"" }}
       ---
       apiVersion: v1
       kind: ConfigMap

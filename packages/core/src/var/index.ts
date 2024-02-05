@@ -6,7 +6,7 @@ import {
   type ChartExpression,
   type ChartDict,
   type ChartAny,
-} from '../core/builder/baseVar';
+} from './types';
 import { chart } from '../utils/format';
 
 export type WriteChart = (...params: Parameters<typeof chart>) => void;
@@ -31,25 +31,20 @@ const isexpression = Symbol('var:is-expression');
 const expreStr = Symbol('var:epxression-str');
 
 export const createExpression = (str: string): ChartExpression => {
-  return {
+  const expr: ChartExpression = {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     [isexpression]: true,
     [expreStr]: str,
-    $not: () => chart`not (${str})`,
+    $not: () => chart`not (${expr})`,
     $default: (value: any) => {
-      if (typeof value === 'string') {
-        return chart`${str} | default "${value}"`;
-      }
-      if (typeof value === 'number' || typeof value === 'boolean') {
-        return chart`${str} | default ${value}`;
-      }
-      return chart`${str} | default (${value})`;
+      return chart`${expr} | default (${value})`;
     },
     $format: () => str,
 
     $wrapPth: () => createExpression(`(${str})`),
   };
+  return expr;
 };
 
 /**
@@ -63,12 +58,10 @@ export const createVarProxy = <T = ChartDict>(opt: {
   const target = {
     [isvar]: true,
     [isexpression]: true,
-    [fieldPath]: opt?.path ?? '$',
+    [fieldPath]: opt?.path ?? '$.',
   };
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  return new Proxy(target, {
+  const varProxy = new Proxy<any>(target, {
     get: (target, prop) => {
       if (typeof prop === 'string') {
         switch (prop) {
@@ -76,7 +69,7 @@ export const createVarProxy = <T = ChartDict>(opt: {
             return (
               fn: (value: VarProxy<T>, key: VarProxy<string>) => void,
             ) => {
-              opt.write`{{- range $key, $value := ${target[fieldPath]} -}}`;
+              opt.write`{{- range $key, $value := ${varProxy} -}}`;
               fn(
                 createVarProxy({ ...opt, path: '$value' }),
                 createVarProxy({ ...opt, path: '$key' }),
@@ -85,13 +78,23 @@ export const createVarProxy = <T = ChartDict>(opt: {
             };
           }
           case '$set': {
-            return (key: string, value: any) => {
-              opt.write`{{- $_ := set ${target[fieldPath]} "${key}" (${value}) -}}`;
+            return (
+              key: ChartExpression,
+              value: ChartExpression | string | number | boolean,
+            ) => {
+              opt.write`{{- $_ := set ${varProxy} ${key} ${value} -}}`;
             };
           }
-          case '$default':
+          case '$hasKey': {
+            return (key: string | ChartExpression) => {
+              return chart`hasKey ${varProxy} ${key}`;
+            };
+          }
+          case '$default': {
+            return (value: any) => chart`${varProxy} | default ${value}`;
+          }
           case '$not': {
-            return createExpression(`${target[fieldPath]}`)[prop];
+            return () => chart`not ${varProxy}`;
           }
           case '$format': {
             return () => {
@@ -106,29 +109,24 @@ export const createVarProxy = <T = ChartDict>(opt: {
         }
 
         if (!(prop in target)) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error
+          const nestedPath = target[fieldPath].endsWith('.')
+            ? `${target[fieldPath]}${prop}`
+            : `${target[fieldPath]}.${prop}`;
           target[prop] = createVarProxy({
             ...opt,
-            path: `${target[fieldPath]}.${prop}`,
+            path: nestedPath,
           });
         }
       }
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       return target[prop];
     },
     set: (target, prop, value) => {
-      if (typeof prop === 'string') {
-        if (typeof value === 'string') {
-          opt.write`{{- $_ := set ${target[fieldPath]} "${prop}" "${value}" -}}`;
-        } else {
-          opt.write`{{- $_ := set ${target[fieldPath]} "${prop}" (${value}) -}}`;
-        }
-      }
+      opt.write`{{- $_ := set ${varProxy} ${prop} ${value} -}}`;
       return true;
     },
   });
+
+  return varProxy as VarProxy<T>;
 };
 
 export const isVar = (obj: any): obj is ChartAny => {

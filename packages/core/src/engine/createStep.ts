@@ -1,14 +1,14 @@
 import {
   type PartialLiteralToChartVar,
   type ChartExpression,
-} from '../core/builder/baseVar';
-import { type WriteChart, createVarProxy } from '../varProxy';
+} from '../var/types';
+import { type WriteChart, createVarProxy } from '../var';
 import {
   type UseScope,
   type ChartFragment,
   type Scope,
   type ChartTemplate,
-} from './type';
+} from './types';
 import { valueFromPartialLiteral } from './utils/valueFromPartialLiteral';
 
 export const createStep = <T>(opt: {
@@ -42,10 +42,13 @@ export const createStep = <T>(opt: {
     enumerable: true,
   });
   step.vars = opt.vars as PartialLiteralToChartVar<any>;
-  step.$comment = (str) => {
-    step(() => {
-      opt.write`{{- /* ${str} */ -}}`;
+  step.write = (...args) => {
+    step(({ write }) => {
+      write(...args);
     });
+  };
+  step.$comment = (str) => {
+    step.write`{{- /* ${str} */ -}}`;
   };
   step.$if = (condition, fn, chain) => {
     const createElseif = () => {
@@ -77,23 +80,22 @@ export const createStep = <T>(opt: {
     });
   };
   step.$assign = ((name: string, value) => {
-    step(() => {
-      opt.write`{{- $${name} := ${value} }}`;
-    });
-
-    return createVarProxy({
+    const v = createVarProxy({
       write: opt.write,
-      path: `${name}`,
+      path: `$${name}`,
     });
+    step.write`{{- ${v} := ${valueFromPartialLiteral(value)} }}`;
+
+    return v;
   }) as ChartFragment<T>['$assign'];
 
   step.$include = (template: ChartTemplate<any>, params: any) => {
     step(() => {
       if (params) {
-        opt.write`{{- include "${template.name}" (${valueFromPartialLiteral(params)}) }}`;
+        opt.write`{{- include ${template.name} ${valueFromPartialLiteral(params)} }}`;
         return;
       }
-      opt.write`{{- include "${template.name}" }}`;
+      opt.write`{{- include ${template.name} }}`;
     });
   };
 

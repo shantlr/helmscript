@@ -1,4 +1,4 @@
-import { type Plugin } from '../engine/type';
+import { type Plugin } from '../engine/types';
 import { printf } from '../fn';
 import { chart } from '../utils/format';
 

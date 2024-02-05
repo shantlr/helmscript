@@ -1,4 +1,4 @@
-import { type WriteChart, createVarProxy } from '../varProxy';
+import { type WriteChart, createVarProxy } from '../var';
 import {
   type ChartFile,
   type ChartComposeEngine,
@@ -6,7 +6,7 @@ import {
   type UseScope,
   type Scope,
   type ChartComposeEngineStage,
-} from './type';
+} from './types';
 import { createStep } from './createStep';
 import { sortBy } from 'lodash';
 import { writeFile } from 'fs/promises';

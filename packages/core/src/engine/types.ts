@@ -5,8 +5,8 @@ import {
   type ChartVar,
   type ChartVarToPartialLiteral,
   type PartialLiteralToChartVar,
-} from '../core/builder/baseVar';
-import { type WriteChart } from '../varProxy';
+} from '../var/types';
+import { type WriteChart } from '../var';
 
 /**
  * Scope for adding instructions
@@ -39,12 +39,16 @@ type If = (
 export interface ChartFragment<Vars> {
   name: string;
   (fn: (arg: { write: WriteChart }) => void): void;
+  write: WriteChart;
 
   vars: PartialLiteralToChartVar<Vars>;
 
   $comment: (str: string) => void;
   $if: If;
-  $assign: <T extends ChartExpression>(name: string, value: T) => T;
+  $assign: <T>(
+    name: string,
+    value: T | ChartExpression,
+  ) => PartialLiteralToChartVar<T>;
   $include: StepInclude;
 
   toString: () => string;

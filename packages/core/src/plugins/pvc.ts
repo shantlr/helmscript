@@ -1,4 +1,4 @@
-import { type Plugin } from '../engine/type';
+import { type Plugin } from '../engine/types';
 import { printf } from '../fn';
 
 export const pluginPvc: Plugin = {

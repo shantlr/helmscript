@@ -10,17 +10,17 @@ describe('plugins/pvc', () => {
     expect(res.toString()).toMatchInlineSnapshot(`
       "compose.yaml:
       {{- if $.Values.pvc }}
-      {{- /* Step pvc default */ -}}
+      {{- /* "Step pvc default" */ -}}
       {{- range $key, $value := $.Values.pvc -}}
       {{- $_ := set $value "name" ($value.name | default (printf "%s-%s" $.Release.Name $key)) -}}
-      {{- if not ($value.external) }}
-      {{- include "plugin_pvc.pvc" (dict "pvc" ($value)) }}
+      {{- if (not $value.external) }}
+      {{- include "plugin_pvc.pvc" (dict "pvc" $value) }}
       {{- end }}
       {{- end -}}
       {{- end }}
 
       plugin_pvc.yaml:
-      {{- define "plugin_pvc.pvc" }}
+      {{- define ""plugin_pvc.pvc"" }}
       ---
       {{- with $.pvc }}
       kind: PersistenVolumeClaim

@@ -1,13 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type ChartExpression } from '../../core/builder/baseVar';
 import { createVarProxy } from '..';
 
 describe('varProxy/default', () => {
   it('should default string', () => {
-    const res: string[] = [];
-    const fn = vi.fn((expr: ChartExpression) => res.push(expr.$format()));
     const varProxy = createVarProxy({
-      addInstruction: fn,
+      write: vi.fn(),
     });
 
     expect(
@@ -15,10 +12,8 @@ describe('varProxy/default', () => {
     ).toMatchInlineSnapshot(`"$.field | default "hello world""`);
   });
   it('should default number', () => {
-    const res: string[] = [];
-    const fn = vi.fn((expr: ChartExpression) => res.push(expr.$format()));
     const varProxy = createVarProxy({
-      addInstruction: fn,
+      write: vi.fn(),
     });
 
     expect(varProxy.field.$default(42).$format()).toMatchInlineSnapshot(
@@ -26,10 +21,8 @@ describe('varProxy/default', () => {
     );
   });
   it('should default boolean', () => {
-    const res: string[] = [];
-    const fn = vi.fn((expr: ChartExpression) => res.push(expr.$format()));
     const varProxy = createVarProxy({
-      addInstruction: fn,
+      write: vi.fn(),
     });
 
     expect(varProxy.field.$default(true).$format()).toMatchInlineSnapshot(

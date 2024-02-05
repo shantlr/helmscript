@@ -18,7 +18,10 @@ export interface ChartVar extends ChartExpression {
   /**
    * equivalent to `{{- $_ := set $var field (value) -}}`
    */
-  $set: (field: string, value: ChartExpression) => void;
+  $set: (
+    field: string | ChartExpression,
+    value: string | number | boolean | ChartExpression,
+  ) => void;
 }
 
 export type RangeBuilder<Item, Key> = (
@@ -36,6 +39,8 @@ export type ChartAny = ChartVar &
 export type ChartDict<Shape = ChartAny> = ChartVar &
   ChartIterable<ChartDict> & {
     [key in keyof Shape]: Shape[key];
+  } & {
+    $hasKey: (field: string | ChartExpression) => ChartBoolVar;
   };
 
 export interface ChartStringVar extends ChartVar {}
